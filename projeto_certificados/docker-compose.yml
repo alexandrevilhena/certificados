@@ -1,0 +1,71 @@
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/certs_db
+    depends_on:
+      - redis
+      - db
+      - rabbitmq
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+      - rabbitmq
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: mydatabase
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/mysql
+
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis_to_rabbit_worker:
+    build: ./worker
+    command: python redis_to_rabbit.py
+    depends_on:
+      - redis
+      - rabbitmq
+
+  rabbit_worker:
+    build: ./worker
+    command: python worker.py
+    depends_on:
+      - rabbitmq
+
+volumes:
+  db_data:

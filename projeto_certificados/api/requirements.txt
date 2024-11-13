@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+psycopg2-binary
+reportlab
+aio_pika
+redis
+aioredis
+pymysql
+mysql-connector-python
